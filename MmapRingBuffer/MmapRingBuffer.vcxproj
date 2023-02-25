@@ -142,6 +142,7 @@
     <ClCompile Include="MmapRingBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="microtest.h" />
     <ClInclude Include="RingBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

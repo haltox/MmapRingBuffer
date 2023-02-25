@@ -1,11 +1,13 @@
 #pragma once
 
-//TODO pad T to n^2 size
+#include <type_traits>
+
+//TODO pad T to n^2 size?
 // 
 
 template <typename T>
 class RingBuffer {
-	static_assert(is_trivial<T>(), "RingBuffer must be templated on a trivial type.");
+	static_assert(std::is_trivial<T>::value, "RingBuffer must be templated on a trivial type.");
 
 private:
 	RingBuffer() {}
@@ -52,7 +54,7 @@ template <typename T>
 RingBuffer<T>::RingBuffer(size_t nbBuckets)
 	: _nbBuckets {nbBuckets}
 {
-	_buffer = new[nbBuckets] T;
+	_buffer = new T[nbBuckets];
 }
 
 template <typename T>
@@ -89,13 +91,14 @@ RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& rhs)
 	_nbBuckets = rhs._nbBuckets;
 
 	// since is_trivial<T> == true could be replaced by memcpy 
-	for (T* l = _buffer, T* r = rhs.buffer; 
+	T* l; T* r;
+	for (l = _buffer, r = rhs.buffer; 
 		 l <= rhs._buffer + rhs.nbBuckets; 
 		 l++, r++) {
 		*l = *r;
 	}
 
-	_buffer = new[rhs._nbBuckets] T;
+	_buffer = new T[rhs._nbBuckets];
 }
 
 template <typename T>
@@ -107,7 +110,7 @@ bool RingBuffer<T>::hasData() const
 template <typename T>
 bool RingBuffer<T>::isFull() const
 {
-	return inc(_write) != _read;
+	return inc(_write) == _read;
 }
 
 template <typename T>
@@ -115,19 +118,21 @@ T&& RingBuffer<T>::read()
 {
 	if (!hasData()) 
 	{
-		return T{};
+		return std::move(T{});
 	}
 
 	size_t i = _read;
-	_read = inc(read);
+	_read = inc(_read);
 
-	return _buffer[i];
+	return std::move(_buffer[i]);
 }
 
 template <typename T>
 void RingBuffer<T>::write(const T& t)
 {
-
+	_buffer[_write] = t;
+	_write = inc(_write);
+	_read = (_write == _read) ? inc(_read) : _read;
 }
 
 template <typename T>

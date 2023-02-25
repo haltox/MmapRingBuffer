@@ -1,20 +1,169 @@
-// MmapRingBuffer.cpp : Ce fichier contient la fonction 'main'. L'exécution du programme commence et se termine à cet endroit.
-//
+#include "microtest.h"
+#include "RingBuffer.h"
 
-#include <iostream>
+TEST(CHAR_BUFFER_REPORTS_DATA_STATE_CORRECTLY) {
+	RingBuffer<char> b{ 4 };
 
-int main()
-{
-    std::cout << "Hello World!\n";
+	ASSERT_FALSE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	b.write('a');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	b.write('b');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	b.write('c');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_TRUE(b.isFull());
+
+	b.write('d');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_TRUE(b.isFull());
+
+	b.read();
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	b.read();
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	b.read();
+	ASSERT_FALSE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	b.read();
+	ASSERT_FALSE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	b.write('e');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
 }
 
-// Exécuter le programme : Ctrl+F5 ou menu Déboguer > Exécuter sans débogage
-// Déboguer le programme : F5 ou menu Déboguer > Démarrer le débogage
+TEST(CHAR_BUFFER_RW_CORRECTLY_FILL_EMPTY) {
+	RingBuffer<char> b{ 4 };
 
-// Astuces pour bien démarrer : 
-//   1. Utilisez la fenêtre Explorateur de solutions pour ajouter des fichiers et les gérer.
-//   2. Utilisez la fenêtre Team Explorer pour vous connecter au contrôle de code source.
-//   3. Utilisez la fenêtre Sortie pour voir la sortie de la génération et d'autres messages.
-//   4. Utilisez la fenêtre Liste d'erreurs pour voir les erreurs.
-//   5. Accédez à Projet > Ajouter un nouvel élément pour créer des fichiers de code, ou à Projet > Ajouter un élément existant pour ajouter des fichiers de code existants au projet.
-//   6. Pour rouvrir ce projet plus tard, accédez à Fichier > Ouvrir > Projet et sélectionnez le fichier .sln.
+	b.write('a');
+	b.write('b');
+	b.write('c');
+
+	char r;
+	r = b.read();
+	ASSERT_EQ('a', r);
+	r = b.read();
+	ASSERT_EQ('b', r);
+	r = b.read();
+	ASSERT_EQ('c', r);
+}
+
+TEST(CHAR_BUFFER_RW_CORRECTLY_LOCKSTEP) {
+	RingBuffer<char> b{ 4 };
+	char r;
+
+	b.write('a');
+	r = b.read();
+	ASSERT_EQ('a', r);
+
+	b.write('b');
+	r = b.read();
+	ASSERT_EQ('b', r);
+	
+	b.write('c');
+	r = b.read();
+	ASSERT_EQ('c', r);
+}
+
+TEST(CHAR_BUFFER_RW_CORRECTLY_LOCKSTEP_OVERFLOW) {
+	RingBuffer<char> b{ 4 };
+	char r;
+
+	b.write('a');
+	r = b.read();
+	ASSERT_EQ('a', r);
+
+	b.write('b');
+	r = b.read();
+	ASSERT_EQ('b', r);
+
+	b.write('c');
+	r = b.read();
+	ASSERT_EQ('c', r);
+
+	b.write('d');
+	r = b.read();
+	ASSERT_EQ('d', r);
+
+	b.write('e');
+	r = b.read();
+	ASSERT_EQ('e', r);
+}
+
+
+TEST(CHAR_BUFFER_RW_CORRECTLY_FILL_EMPTY_OVERFLOW) {
+	RingBuffer<char> b{ 4 };
+
+	b.write('a');
+	b.write('b');
+	b.write('c');
+	b.write('d');
+	b.write('e');
+
+	char r;
+	r = b.read();
+	ASSERT_EQ('c', r);
+	r = b.read();
+	ASSERT_EQ('d', r);
+	r = b.read();
+	ASSERT_EQ('e', r);
+}
+
+TEST(CHAR_BUFFER_COMPLEX_RW) {
+	RingBuffer<char> b{ 4 };
+	char r;
+
+	b.write('a');
+	b.write('b');
+	b.write('c');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_TRUE(b.isFull());
+	
+	r = b.read();
+	ASSERT_EQ('a', r);
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+	
+	b.write('d');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_TRUE(b.isFull());
+	
+	b.write('e');
+	ASSERT_TRUE(b.hasData());
+	ASSERT_TRUE(b.isFull());
+
+	r = b.read();
+	ASSERT_EQ('c', r);
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	r = b.read();
+	ASSERT_EQ('d', r);
+	ASSERT_TRUE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	r = b.read();
+	ASSERT_EQ('e', r);
+	ASSERT_FALSE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+
+	r = b.read();
+	ASSERT_EQ((char)0, r);
+	ASSERT_FALSE(b.hasData());
+	ASSERT_FALSE(b.isFull());
+}
+
+TEST_MAIN();
