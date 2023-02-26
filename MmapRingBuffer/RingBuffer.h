@@ -1,6 +1,8 @@
 #pragma once
 
 #include <type_traits>
+#include <Memoryapi.h>
+#include <WinBase.h>
 
 //TODO pad T to n^2 size?
 // 

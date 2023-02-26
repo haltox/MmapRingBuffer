@@ -1,5 +1,20 @@
+#include <windows.h>
+#include <iostream>
+
 #include "microtest.h"
+#include "VMemMirrorBuffer.h"
 #include "RingBuffer.h"
+
+#include <sysinfoapi.h>
+
+TEST(PRINT_SYSTEM_INFO) {
+	SYSTEM_INFO sys{};
+	GetSystemInfo(&sys);
+
+	std::cout << "**************** System Info ****************" << std::endl;
+	std::cout << "PageSize: " << sys.dwPageSize << std::endl;
+	std::cout << "*********************************************" << std::endl;
+}
 
 TEST(CHAR_BUFFER_REPORTS_DATA_STATE_CORRECTLY) {
 	RingBuffer<char> b{ 4 };
@@ -164,6 +179,41 @@ TEST(CHAR_BUFFER_COMPLEX_RW) {
 	ASSERT_EQ((char)0, r);
 	ASSERT_FALSE(b.hasData());
 	ASSERT_FALSE(b.isFull());
+}
+
+TEST(TEST_MIRROR_BUFFER) {
+	VMemMirrorBuffer buffer{};
+	size_t pageSize = System::getPageSize();
+	
+	buffer.allocate(pageSize);
+
+	ASSERT_TRUE(buffer.isAllocated())
+
+	char* ptr = static_cast<char*>(buffer.getRawBuffer());
+
+	for (size_t i = 0; i < pageSize; i++) {
+		ptr[i] = static_cast<char>(i % 128);
+	}
+
+	for (size_t i = 0; i < pageSize; i++) {
+		ASSERT_EQ(ptr[i + pageSize], static_cast<char>(i % 128));
+	}
+
+	for (size_t i = 0; i < pageSize; i++) {
+		ptr[i] = static_cast<char>(0);
+	}
+
+	for (size_t i = 0; i < pageSize; i++) {
+		ASSERT_EQ(ptr[i + pageSize], static_cast<char>(0));
+	}
+
+	for (size_t i = 0; i < pageSize; i++) {
+		ptr[i + pageSize] = static_cast<char>(i % 128);
+	}
+
+	for (size_t i = 0; i < pageSize; i++) {
+		ASSERT_EQ(ptr[i], static_cast<char>(i % 128));
+	}
 }
 
 TEST_MAIN();
