@@ -4,6 +4,8 @@
 #include <Memoryapi.h>
 #include <WinBase.h>
 
+#include "VMemMirrorBuffer.h"
+
 //TODO pad T to n^2 size?
 // 
 
@@ -45,7 +47,7 @@ private:
 	size_t _nbBuckets {0};
 
 	// The buffer of the ring buffer
-	T* _buffer {nullptr};
+	VMemMirrorBuffer _buffer{};
 
 	// Read and write heads
 	size_t _read {0};
@@ -56,7 +58,15 @@ template <typename T>
 RingBuffer<T>::RingBuffer(size_t nbBuckets)
 	: _nbBuckets {nbBuckets}
 {
-	_buffer = new T[nbBuckets];
+	size_t bufferSize = nbBuckets * sizeof(T);
+	if (bufferSize % System::getPageSize() != 0) 
+	{
+		//todo math this out : increase nbBuckets so that buffer size is a whole 
+		//                     multiple of pagesize
+		throw std::runtime_error{ "nbBuckets * sizeof T must a whole multiple of pagesize" };
+	}
+
+	_buffer.allocate(bufferSize);
 }
 
 template <typename T>
@@ -71,36 +81,33 @@ RingBuffer<T>::RingBuffer(RingBuffer<T>&& rhs)
 {
 	this();
 	*this = std::move(rhs);
-	std::swap(*this, rhs);
 }
 
 template <typename T>
 RingBuffer<T>::~RingBuffer() {
-	delete[] _buffer;
 }
 
 template <typename T>
 RingBuffer<T>& RingBuffer<T>::operator=(RingBuffer<T>&& rhs)
 {
-	*this = std::move(rhs);
+	std::swap(_nbBuckets, rhs._nbBuckets);
+	std::swap(_read, rhs._read);
+	std::swap(_write, rhs._write);
+
+	_buffer = std::move(rhs);
+
 	return *this;
 }
 
 template <typename T>
 RingBuffer<T>& RingBuffer<T>::operator=(const RingBuffer<T>& rhs)
 {
-	delete[] _buffer;
 	_nbBuckets = rhs._nbBuckets;
+	_read = rhs._read;
+	_write = rhs._write;
+	_buffer = rhs._buffer;
 
-	// since is_trivial<T> == true could be replaced by memcpy 
-	T* l; T* r;
-	for (l = _buffer, r = rhs.buffer; 
-		 l <= rhs._buffer + rhs.nbBuckets; 
-		 l++, r++) {
-		*l = *r;
-	}
-
-	_buffer = new T[rhs._nbBuckets];
+	return *this;
 }
 
 template <typename T>
@@ -123,16 +130,19 @@ T&& RingBuffer<T>::read()
 		return std::move(T{});
 	}
 
+	T* data = _buffer.getBuffer<T>();
 	size_t i = _read;
 	_read = inc(_read);
 
-	return std::move(_buffer[i]);
+	return std::move(data[i]);
 }
 
 template <typename T>
 void RingBuffer<T>::write(const T& t)
 {
-	_buffer[_write] = t;
+	T* data = _buffer.getBuffer<T>();
+
+	data[_write] = t;
 	_write = inc(_write);
 	_read = (_write == _read) ? inc(_read) : _read;
 }

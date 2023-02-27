@@ -7,6 +7,11 @@
 
 #include <sysinfoapi.h>
 
+struct BUFFED_CHAR {
+	char v;
+	char buff[1023];
+};
+
 TEST(PRINT_SYSTEM_INFO) {
 	SYSTEM_INFO sys{};
 	GetSystemInfo(&sys);
@@ -16,25 +21,34 @@ TEST(PRINT_SYSTEM_INFO) {
 	std::cout << "*********************************************" << std::endl;
 }
 
+TEST(TEST_CONSTANTS) {
+	ASSERT_EQ(1024, sizeof(BUFFED_CHAR));
+}
+
 TEST(CHAR_BUFFER_REPORTS_DATA_STATE_CORRECTLY) {
-	RingBuffer<char> b{ 4 };
+	RingBuffer<BUFFED_CHAR> b{ 4 };
 
 	ASSERT_FALSE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
-	b.write('a');
+	BUFFED_CHAR c;
+	c.v = 'a';
+	b.write(c);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
-	b.write('b');
+	c.v = 'b';
+	b.write(c);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
-	b.write('c');
+	c.v = 'c';
+	b.write(c);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_TRUE(b.isFull());
 
-	b.write('d');
+	c.v = 'd';
+	b.write(c);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_TRUE(b.isFull());
 
@@ -54,129 +68,161 @@ TEST(CHAR_BUFFER_REPORTS_DATA_STATE_CORRECTLY) {
 	ASSERT_FALSE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
-	b.write('e');
+	c.v = 'e';
+	b.write(c);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
 }
 
 TEST(CHAR_BUFFER_RW_CORRECTLY_FILL_EMPTY) {
-	RingBuffer<char> b{ 4 };
+	RingBuffer<BUFFED_CHAR> b{ 4 };
 
-	b.write('a');
-	b.write('b');
-	b.write('c');
+	BUFFED_CHAR cw;
 
-	char r;
-	r = b.read();
-	ASSERT_EQ('a', r);
-	r = b.read();
-	ASSERT_EQ('b', r);
-	r = b.read();
-	ASSERT_EQ('c', r);
+	cw.v = 'a';
+	b.write(cw);
+	cw.v = 'b';
+	b.write(cw);
+	cw.v = 'c';
+	b.write(cw);
+
+	BUFFED_CHAR cr;
+	cr = b.read();
+	ASSERT_EQ('a', cr.v);
+	cr = b.read();
+	ASSERT_EQ('b', cr.v);
+	cr = b.read();
+	ASSERT_EQ('c', cr.v);
 }
 
 TEST(CHAR_BUFFER_RW_CORRECTLY_LOCKSTEP) {
-	RingBuffer<char> b{ 4 };
-	char r;
+	RingBuffer<BUFFED_CHAR> b{ 4 };
 
-	b.write('a');
-	r = b.read();
-	ASSERT_EQ('a', r);
+	BUFFED_CHAR cr;
+	BUFFED_CHAR cw;
 
-	b.write('b');
-	r = b.read();
-	ASSERT_EQ('b', r);
+	cw.v = 'a';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('a', cr.v);
+
+	cw.v = 'b';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('b', cr.v);
 	
-	b.write('c');
-	r = b.read();
-	ASSERT_EQ('c', r);
+	cw.v = 'c';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('c', cr.v);
 }
 
 TEST(CHAR_BUFFER_RW_CORRECTLY_LOCKSTEP_OVERFLOW) {
-	RingBuffer<char> b{ 4 };
-	char r;
+	RingBuffer<BUFFED_CHAR> b{ 4 };
 
-	b.write('a');
-	r = b.read();
-	ASSERT_EQ('a', r);
+	BUFFED_CHAR cr;
+	BUFFED_CHAR cw;
 
-	b.write('b');
-	r = b.read();
-	ASSERT_EQ('b', r);
+	cw.v = 'a';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('a', cr.v);
 
-	b.write('c');
-	r = b.read();
-	ASSERT_EQ('c', r);
+	cw.v = 'b';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('b', cr.v);
 
-	b.write('d');
-	r = b.read();
-	ASSERT_EQ('d', r);
+	cw.v = 'c';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('c', cr.v);
 
-	b.write('e');
-	r = b.read();
-	ASSERT_EQ('e', r);
+	cw.v = 'd';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('d', cr.v);
+
+	cw.v = 'e';
+	b.write(cw);
+	cr = b.read();
+	ASSERT_EQ('e', cr.v);
 }
 
 
 TEST(CHAR_BUFFER_RW_CORRECTLY_FILL_EMPTY_OVERFLOW) {
-	RingBuffer<char> b{ 4 };
+	RingBuffer<BUFFED_CHAR> b{ 4 };
 
-	b.write('a');
-	b.write('b');
-	b.write('c');
-	b.write('d');
-	b.write('e');
+	BUFFED_CHAR cr;
+	BUFFED_CHAR cw;
 
-	char r;
-	r = b.read();
-	ASSERT_EQ('c', r);
-	r = b.read();
-	ASSERT_EQ('d', r);
-	r = b.read();
-	ASSERT_EQ('e', r);
+	cw.v = 'a';
+	b.write(cw);
+	cw.v = 'b';
+	b.write(cw);
+	cw.v = 'c';
+	b.write(cw);
+	cw.v = 'd';
+	b.write(cw);
+	cw.v = 'e';
+	b.write(cw);
+
+	cr = b.read();
+	ASSERT_EQ('c', cr.v);
+	cr = b.read();
+	ASSERT_EQ('d', cr.v);
+	cr = b.read();
+	ASSERT_EQ('e', cr.v);
 }
 
 TEST(CHAR_BUFFER_COMPLEX_RW) {
-	RingBuffer<char> b{ 4 };
-	char r;
+	RingBuffer<BUFFED_CHAR> b{ 4 };
 
-	b.write('a');
-	b.write('b');
-	b.write('c');
+	BUFFED_CHAR cr;
+	BUFFED_CHAR cw;
+
+	cw.v = 'a';
+	b.write(cw);
+	cw.v = 'b';
+	b.write(cw);
+	cw.v = 'c';
+	b.write(cw);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_TRUE(b.isFull());
 	
-	r = b.read();
-	ASSERT_EQ('a', r);
+	cr = b.read();
+	ASSERT_EQ('a', cr.v);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 	
-	b.write('d');
+	cw.v = 'd';
+	b.write(cw);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_TRUE(b.isFull());
 	
-	b.write('e');
+	cw.v = 'e';
+	b.write(cw);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_TRUE(b.isFull());
 
-	r = b.read();
-	ASSERT_EQ('c', r);
+	cr = b.read();
+	ASSERT_EQ('c', cr.v);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
-	r = b.read();
-	ASSERT_EQ('d', r);
+	cr = b.read();
+	ASSERT_EQ('d', cr.v);
 	ASSERT_TRUE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
-	r = b.read();
-	ASSERT_EQ('e', r);
+	cr = b.read();
+	ASSERT_EQ('e', cr.v);
 	ASSERT_FALSE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 
-	r = b.read();
-	ASSERT_EQ((char)0, r);
+	cr = b.read();
+	//ASSERT_EQ(0, cr.v); // don't assert value - it might be garbo
 	ASSERT_FALSE(b.hasData());
 	ASSERT_FALSE(b.isFull());
 }

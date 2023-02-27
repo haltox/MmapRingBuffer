@@ -16,7 +16,11 @@ class VMemMirrorBuffer {
 public:
 	VMemMirrorBuffer() {}
 	VMemMirrorBuffer(size_t size);
+	VMemMirrorBuffer(const VMemMirrorBuffer& rhs);
+	VMemMirrorBuffer(VMemMirrorBuffer&& rhs);
 	~VMemMirrorBuffer();
+	VMemMirrorBuffer& operator= (const VMemMirrorBuffer & rhs);
+	VMemMirrorBuffer& operator= (VMemMirrorBuffer && rhs);
 
 	bool allocate(size_t size);
 	void free();
@@ -27,6 +31,11 @@ public:
 
 	void* getRawBuffer() {
 		return _actualBuffer;
+	}
+
+	template <typename T>
+	T* getBuffer() {
+		return reinterpret_cast<T*>(_actualBuffer);
 	}
 
 	size_t getPageSize() const { return _size; }
@@ -52,13 +61,52 @@ private:
 
 VMemMirrorBuffer::VMemMirrorBuffer(size_t size)
 {
-
 	allocate(size);
+}
+
+VMemMirrorBuffer::VMemMirrorBuffer(const VMemMirrorBuffer& rhs)
+{
+	*this = rhs;
+}
+
+VMemMirrorBuffer::VMemMirrorBuffer(VMemMirrorBuffer&& rhs)
+{
+	*this = std::move(rhs);
 }
 
 VMemMirrorBuffer::~VMemMirrorBuffer()
 {
 	free();
+}
+
+VMemMirrorBuffer& VMemMirrorBuffer::operator= (const VMemMirrorBuffer& rhs)
+{
+	free();
+
+	if (rhs.isAllocated()) {
+		_size = rhs._size;
+		allocate(_size);
+
+		memcpy(_actualBuffer, rhs._actualBuffer, _size);
+	}
+
+	return *this;
+}
+
+VMemMirrorBuffer& VMemMirrorBuffer::operator= (VMemMirrorBuffer&& rhs)
+{
+	// to free or not to free? theoretically rhs should be 
+	// destroyed(and free lhs member) soon after this call...
+	std::swap(_allocated, rhs._allocated);
+	std::swap(_size, rhs._size);
+	std::swap(_actualBuffer, rhs._actualBuffer);
+	std::swap(_pageFile, rhs._pageFile);
+	std::swap(_view1, rhs._view1);
+	std::swap(_view2, rhs._view2);
+	std::swap(_firstSegment, rhs._firstSegment);
+	std::swap(_secondSegment, rhs._secondSegment);
+
+	return *this;
 }
 
 bool VMemMirrorBuffer::allocate(size_t size)
@@ -153,8 +201,6 @@ bool VMemMirrorBuffer::allocate(size_t size)
 	catch( std::runtime_error& ex ) 
 	{
 		free();
-
-
 		throw ex;
 	}
 }
@@ -163,15 +209,18 @@ void VMemMirrorBuffer::free()
 {
 	if (_view1 != nullptr) {
 		UnmapViewOfFileEx(_view1, 0);
+		_view1 = nullptr;
 	}
 
 	if (_view2 != nullptr) {
 		UnmapViewOfFileEx(_view2, 0);
+		_view2 = nullptr;
 	}
 
-	if (_pageFile != INVALID_HANDLE_VALUE)
+	if (_pageFile != INVALID_HANDLE_VALUE && _pageFile != NULL)
 	{
 		CloseHandle(_pageFile);
+		_pageFile = NULL;
 	}
 
 	if (_secondSegment != nullptr) 
@@ -187,4 +236,5 @@ void VMemMirrorBuffer::free()
 	}
 
 	_allocated = false;
+	_size = 0;
 }
