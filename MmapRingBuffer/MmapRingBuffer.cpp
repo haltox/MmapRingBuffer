@@ -267,6 +267,52 @@ TEST(TEST_AVAILABLE_BUCKETS) {
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 3);
 	ASSERT_FALSE(b.hasData());
+
+	b.read();
+	ASSERT_EQ(b.availableBuckets(), 3);
+	ASSERT_FALSE(b.hasData());
+
+	b.read();
+	ASSERT_EQ(b.availableBuckets(), 3);
+	ASSERT_FALSE(b.hasData());
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 2);
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 1);
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_TRUE(b.isFull());
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_TRUE(b.isFull());
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_TRUE(b.isFull());
+
+	b.read();
+	ASSERT_EQ(b.availableBuckets(), 1);
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_TRUE(b.isFull());
+
+	b.read();
+	ASSERT_EQ(b.availableBuckets(), 1);
+
+	b.read();
+	ASSERT_EQ(b.availableBuckets(), 2);
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 1);
+
+	b.write(cr);
+	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_TRUE(b.isFull());
 }
 
 TEST(TEST_MIRROR_BUFFER) {
