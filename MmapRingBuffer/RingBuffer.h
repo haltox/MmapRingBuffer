@@ -6,11 +6,11 @@
 
 #include "VMemMirrorBuffer.h"
 
-//TODO pad T to n^2 size?
-// 
-
 template <typename T>
 class RingBuffer {
+	// Supports trivial types only because the underlying data structure is a bit finicky and
+	// I used a memcpy somewhere. Maybe a weaker assertion would work. Maybe is_trivial ain't 
+	// actually that bad.
 	static_assert(std::is_trivial<T>::value, "RingBuffer must be templated on a trivial type.");
 
 private:
@@ -28,10 +28,13 @@ public:
 	bool hasData() const;
 	bool isFull() const;
 
+	// Max amount of filled buckets in the buffer before overwriting happens.
+	size_t availableBuckets() const { return _nbBuckets - 1; }
+
 	// Returns how many buckets can be filled before data is overwritten
 	// i.e. before the read head is moved. If the next write is to push 
 	// the read head, returns 0. Returns a maximum of nbBuckets - 1
-	size_t availableBuckets() const;
+	size_t availableForWrite() const;
 
 	// Returns how many buckets can be read
 	size_t availableForRead() const;
@@ -44,6 +47,23 @@ public:
 	// T is taken as a const ref to support rvalue refs while maintaining
 	// a non destructive behaviour on the input.
 	void write(const T& t);
+
+	void reset();
+
+	// For batch operations - direct access to buffer and to heads
+	// Only use if you know what you are doing.
+	// Batch write and reads (e.g. memcpy) to buffer don't need to wrap around.
+	// This is handled magically by VMemMirrorBuffer. Still, don't write more at once 
+	// than availableBuckets.
+	//
+	// DONT FORGET TO INCREMENT HEADS AND TO CHECK AVAILABLE DATA.
+	T* rawBuffer() { return _buffer.getBuffer<T>(); };
+
+	// UB if offset > availableForRead.
+	void advanceReadHead(size_t offset);
+	
+	// UB if offset > availableBuckets
+	void advanceWriteHead(size_t offset);
 
 private:
 	size_t inc(size_t base) const;
@@ -135,7 +155,7 @@ bool RingBuffer<T>::isFull() const
 }
 
 template <typename T>
-size_t RingBuffer<T>::availableBuckets() const
+size_t RingBuffer<T>::availableForWrite() const
 {
 	// TODO The whole fn could probably be simplified to :
 	// return _nbBuckets - 1 - availableForRead()
@@ -192,6 +212,33 @@ void RingBuffer<T>::write(const T& t)
 	data[_write] = t;
 	_write = inc(_write);
 	_read = (_write == _read) ? inc(_read) : _read;
+}
+
+template <typename T>
+void RingBuffer<T>::reset()
+{
+	_read = 0;
+	_write = 0;
+}
+
+template <typename T>
+void RingBuffer<T>::advanceReadHead(size_t offset)
+{
+	_read = (_read + offset) % _nbBuckets;
+}
+
+template <typename T>
+void RingBuffer<T>::advanceWriteHead(size_t offset)
+{
+	size_t nextWrite = (_write + offset) % _nbBuckets;
+	size_t nextRead = _read;
+
+	if (offset > availableForWrite()) {
+		nextRead = inc(nextWrite);
+	}
+
+	_write = nextWrite;
+	_read = nextRead;
 }
 
 template <typename T>
