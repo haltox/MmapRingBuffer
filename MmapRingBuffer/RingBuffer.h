@@ -28,6 +28,11 @@ public:
 	bool hasData() const;
 	bool isFull() const;
 
+	// Returns how many buckets can be filled before data is overwritten
+	// i.e. before the read head is returned.
+	// Returns a maximum of nbBuckets - 1
+	size_t availableBuckets() const;
+
 	// T is returned as an R value since the bucket is considered as 
 	// freed after the operation. Caller should copy or move but not keep
 	// the ref.
@@ -43,7 +48,7 @@ private:
 private:
 	// Number of buckets available for data type T - not the size in bytes
 	// of the buffer.
-	// Typically, nbBuckets - 1 will be available for use at once. 
+	// nbBuckets - 1 will be available for use at once. 
 	size_t _nbBuckets {0};
 
 	// The buffer of the ring buffer
@@ -59,7 +64,11 @@ RingBuffer<T>::RingBuffer(size_t nbBuckets)
 	: _nbBuckets {nbBuckets}
 {
 	size_t bufferSize = nbBuckets * sizeof(T);
-	if (bufferSize % System::getPageSize() != 0) 
+	if (bufferSize == 0) 
+	{
+		throw std::runtime_error{ "size of buffer must be non-zero." };
+	}
+	else if (bufferSize % System::getPageSize() != 0) 
 	{
 		//todo math this out : increase nbBuckets so that buffer size is a whole 
 		//                     multiple of pagesize
@@ -120,6 +129,25 @@ template <typename T>
 bool RingBuffer<T>::isFull() const
 {
 	return inc(_write) == _read;
+}
+
+template <typename T>
+size_t RingBuffer<T>::availableBuckets() const
+{
+	if (_read == _write) 
+	{
+		return _nbBuckets - 1;
+	}
+	else if (_write > _read) 
+	{
+		// we have to loop around. get remaining buckets + _write - 1
+		return _nbBuckets - _write + _read - 1;
+	}
+	else 
+	{
+		// distance - 1
+		return _read - _write - 1;
+	}
 }
 
 template <typename T>
