@@ -227,91 +227,115 @@ TEST(CHAR_BUFFER_COMPLEX_RW) {
 	ASSERT_FALSE(b.isFull());
 }
 
-TEST(TEST_AVAILABLE_BUCKETS) {
+TEST(TEST_BUCKETS_COUNT) {
 	RingBuffer<BUFFED_CHAR> b{ 4 };
 	BUFFED_CHAR cr;
 	cr.v = 'a';
 
 	ASSERT_EQ(b.availableBuckets(), 3);
+	ASSERT_EQ(b.availableForRead(), 0);
 	ASSERT_FALSE(b.isFull());
+	ASSERT_FALSE(b.hasData());
 	
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 2);
+	ASSERT_EQ(b.availableForRead(), 1);
 	ASSERT_FALSE(b.isFull());
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
 	ASSERT_FALSE(b.isFull());
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 2);
+	ASSERT_EQ(b.availableForRead(), 1);
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 3);
+	ASSERT_EQ(b.availableForRead(), 0);
 	ASSERT_FALSE(b.hasData());
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 3);
+	ASSERT_EQ(b.availableForRead(), 0);
 	ASSERT_FALSE(b.hasData());
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 3);
+	ASSERT_EQ(b.availableForRead(), 0);
 	ASSERT_FALSE(b.hasData());
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 2);
+	ASSERT_EQ(b.availableForRead(), 1);
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
 
 	b.read();
 	ASSERT_EQ(b.availableBuckets(), 2);
+	ASSERT_EQ(b.availableForRead(), 1);
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
 
 	b.write(cr);
 	ASSERT_EQ(b.availableBuckets(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
 	ASSERT_TRUE(b.isFull());
 }
 

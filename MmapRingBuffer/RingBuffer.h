@@ -29,9 +29,12 @@ public:
 	bool isFull() const;
 
 	// Returns how many buckets can be filled before data is overwritten
-	// i.e. before the read head is returned.
-	// Returns a maximum of nbBuckets - 1
+	// i.e. before the read head is moved. If the next write is to push 
+	// the read head, returns 0. Returns a maximum of nbBuckets - 1
 	size_t availableBuckets() const;
+
+	// Returns how many buckets can be read
+	size_t availableForRead() const;
 
 	// T is returned as an R value since the bucket is considered as 
 	// freed after the operation. Caller should copy or move but not keep
@@ -134,6 +137,8 @@ bool RingBuffer<T>::isFull() const
 template <typename T>
 size_t RingBuffer<T>::availableBuckets() const
 {
+	// TODO The whole fn could probably be simplified to :
+	// return _nbBuckets - 1 - availableForRead()
 	if (_read == _write) 
 	{
 		return _nbBuckets - 1;
@@ -147,6 +152,20 @@ size_t RingBuffer<T>::availableBuckets() const
 	{
 		// distance - 1
 		return _read - _write - 1;
+	}
+}
+
+template <typename T>
+size_t RingBuffer<T>::availableForRead() const
+{
+	if (_write >= _read)
+	{
+		return _write - _read;
+	}
+	else 
+	{
+		// we have to loop around.
+		return _nbBuckets - _read + _write;
 	}
 }
 
