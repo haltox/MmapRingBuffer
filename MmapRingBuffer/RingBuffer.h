@@ -58,6 +58,8 @@ public:
 	//
 	// DONT FORGET TO INCREMENT HEADS AND TO CHECK AVAILABLE DATA.
 	T* rawBuffer() { return _buffer.getBuffer<T>(); };
+	T* readBuffer() { return &_buffer.getBuffer<T>()[_read]; };
+	T* writeBuffer() { return &_buffer.getBuffer<T>()[_write]; };
 
 	// UB if offset > availableForRead.
 	void advanceReadHead(size_t offset);

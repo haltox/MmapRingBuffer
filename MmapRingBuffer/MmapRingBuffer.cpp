@@ -374,4 +374,76 @@ TEST(TEST_MIRROR_BUFFER) {
 	}
 }
 
+TEST(TEST_BATCH_WRITE) {
+	RingBuffer<BUFFED_CHAR> b{ 4 };
+	BUFFED_CHAR cr;
+	BUFFED_CHAR cw;
+
+	{
+		BUFFED_CHAR cw1;
+		BUFFED_CHAR cw2;
+		BUFFED_CHAR cw3;
+
+		cw1.v = 'a';
+		cw2.v = 'b';
+		cw3.v = 'c';
+
+		BUFFED_CHAR* buffer = b.writeBuffer();
+		buffer[0] = cw1;
+		buffer[1] = cw2;
+
+		b.advanceWriteHead(2);
+
+		buffer = b.writeBuffer();
+		buffer[0] = cw3;
+
+		b.advanceWriteHead(1);
+	}
+
+	ASSERT_TRUE(b.isFull());
+	ASSERT_EQ(b.availableForWrite(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
+
+	cr = b.read();
+	ASSERT_EQ(cr.v, 'a');
+	cr = b.read();
+	ASSERT_EQ(cr.v, 'b');
+	cr = b.read();
+	ASSERT_EQ(cr.v, 'c');
+
+	b.reset();
+
+	cw.v = 'e';
+	b.write(cw);
+	b.write(cw);
+	ASSERT_EQ(b.availableForWrite(), 1);
+	ASSERT_EQ(b.availableForRead(), 2);
+
+	{
+		BUFFED_CHAR cw1;
+		BUFFED_CHAR cw2;
+		cw1.v = 'f';
+		cw2.v = 'g';
+
+		BUFFED_CHAR* buffer = b.writeBuffer();
+
+		buffer[0] = cw1;
+		buffer[1] = cw2;
+
+		b.advanceWriteHead(2);
+	}
+
+	ASSERT_TRUE(b.isFull());
+	ASSERT_EQ(b.availableForWrite(), 0);
+	ASSERT_EQ(b.availableForRead(), 3);
+
+	cr = b.read();
+	ASSERT_EQ(cr.v, 'e');
+	cr = b.read();
+	ASSERT_EQ(cr.v, 'f');
+	cr = b.read();
+	ASSERT_EQ(cr.v, 'g');
+}
+
+
 TEST_MAIN();
